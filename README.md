@@ -2,7 +2,7 @@
 
 Tanmay Dubey
 
-I used Catch2 as my testing framework.
+I used Catch2 as my testing framework. The .c file was used for testing C implementations, and the .cc file for C++ ones.
 
 Test results for my cache:
 
