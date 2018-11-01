@@ -79,13 +79,13 @@ struct FIFO_evictor {
 
 void FIFO_enqueue(struct FIFO_evictor *evictor, key_type key) {
     if (evictor->queue_tail == NULL) {
-        evictor->queue_tail = malloc(sizeof(struct FIFO_node_struct));
+        evictor->queue_tail = (FIFO_node) malloc(sizeof(struct FIFO_node_struct));
         evictor->queue_tail->key = key;
         evictor->queue_tail->next = NULL;
         evictor->queue_head = evictor->queue_tail;
     }
     else {
-        FIFO_node new_node = malloc(sizeof(struct FIFO_node_struct));
+        FIFO_node new_node = (FIFO_node) malloc(sizeof(struct FIFO_node_struct));
         new_node->key = key;
         new_node->next = NULL;
         evictor->queue_tail->next = new_node;
@@ -110,11 +110,11 @@ key_type FIFO_dequeue(struct evictor *evictor) {
 }
 
 struct FIFO_evictor *construct_FIFO_evictor() {
-    struct FIFO_evictor *ret = malloc(sizeof(struct FIFO_evictor));
+    struct FIFO_evictor *ret = (struct FIFO_evictor *) malloc(sizeof(struct FIFO_evictor));
     ret->queue_head = NULL;
     ret->queue_tail = NULL;
     ret->push = FIFO_enqueue;
-    struct evictor *base = malloc(sizeof(struct evictor));
+    struct evictor *base = (struct evictor *) malloc(sizeof(struct evictor));
     base->pop = FIFO_dequeue;
     ret->FIFO_evictor = *base;
     return ret;
@@ -131,7 +131,7 @@ cache_type create_cache(index_type maxmem, evictor_type evictor, hash_func hashe
     }
 
     index_type default_starting_array_size = 8;
-    cache_entry *array = malloc(default_starting_array_size * sizeof(cache_entry));
+    cache_entry *array = (cache_entry *) malloc(default_starting_array_size * sizeof(cache_entry));
     if (array == NULL) {
         printf("Error trying to allocate memory for cache array");
         return NULL;
@@ -141,7 +141,7 @@ cache_type create_cache(index_type maxmem, evictor_type evictor, hash_func hashe
     }
 
     // see if initializing using pointer to cache_obj (cache_type) works
-    cache_type cache_ptr = malloc(sizeof(struct cache_obj));
+    cache_type cache_ptr = (cache_type) malloc(sizeof(struct cache_obj));
     cache_ptr->max_size = maxmem;
     cache_ptr->current_size = 0;
     cache_ptr->no_of_buckets = default_starting_array_size;
@@ -153,7 +153,7 @@ cache_type create_cache(index_type maxmem, evictor_type evictor, hash_func hashe
     else {
         evictor = (struct evictor *) evictor;
     }
-    cache_ptr->evictor = evictor;
+    cache_ptr->evictor = (struct evictor *) evictor;
     cache_ptr->hasher = hasher;
     return cache_ptr;
 }
@@ -164,7 +164,7 @@ void cache_set(cache_type cache, key_type key, val_type val, index_type val_size
         printf("Value is too big for cache\n");
         return;
     }
-    index_type *size = malloc(sizeof(index_type));
+    index_type *size = (index_type *) malloc(sizeof(index_type));
     while (cache_space_used(cache) + val_size > cache->max_size) {
         key_type key_to_evict = "";
 
@@ -182,7 +182,7 @@ void cache_set(cache_type cache, key_type key, val_type val, index_type val_size
     cache_entry q = NULL;
     while (p != NULL) {
         if ((strcmp(p->elt_key, key) == 0)) {
-            memcpy(p->value, val, val_size);
+            memcpy((void *) p->value, val, val_size);
             p->val_size = val_size;
             return;
         }
@@ -190,16 +190,16 @@ void cache_set(cache_type cache, key_type key, val_type val, index_type val_size
         p = p->next;
     }
     if (p == NULL) {
-        cache_entry new_entry = malloc(sizeof(struct cache_elt));
-        new_entry->elt_key = calloc(strlen(key)+1, sizeof(key));
+        cache_entry new_entry = (cache_entry) malloc(sizeof(struct cache_elt));
+        new_entry->elt_key = (key_type) calloc(strlen(key)+1, sizeof(key));
         // new_entry->elt_key = malloc(sizeof(key));
         new_entry->value = malloc(val_size);
         if ((new_entry->elt_key == NULL) || (new_entry->value == NULL)) {
             printf("Error trying to allocate memory for key %s\n", key);
             return;
         }
-        strcpy(new_entry->elt_key, key); // fixed SIGSEGV at this line!
-        memcpy(new_entry->value, val, val_size);
+        strcpy((char *) new_entry->elt_key, key); // fixed SIGSEGV at this line!
+        memcpy((void *) new_entry->value, val, val_size);
         new_entry->val_size = val_size;
         new_entry->next = NULL;
         if (q == NULL) {
@@ -289,8 +289,8 @@ void cache_delete(cache_type cache, key_type key) {
             else {
                 q->next = p->next;
             }
-            free(p->value);
-            free(p->elt_key);
+            free((void *) p->value);
+            free((void *) p->elt_key);
             free(p);
             cache->current_size -= 1;
             break;
@@ -349,7 +349,7 @@ void resize_cache(cache_type cache) {
 
     index_type new_buckets = (cache->no_of_buckets)*2;
     cache_entry *old_array = cache->array;
-    cache_entry *new_array = malloc(new_buckets * sizeof(cache_entry));
+    cache_entry *new_array = (cache_entry *) malloc(new_buckets * sizeof(cache_entry));
     if (new_array == NULL) {
         printf("Error trying to allocate memory for new array during resizing");
         return;
@@ -361,7 +361,7 @@ void resize_cache(cache_type cache) {
     struct cache_elt placeholder_array[cache->current_size];
     key_type key = "";
     val_type value = NULL;
-    index_type *size = malloc(sizeof(index_type));
+    index_type *size = (index_type *) malloc(sizeof(index_type));
     for (index_type i = 0; i < cache->current_size; i++) {
         key = cache->evictor->pop(cache->evictor);
         value = cache_get(cache, key, size);
