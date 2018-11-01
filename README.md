@@ -52,7 +52,7 @@ retrieve_evicted | :heavy_check_mark:
 retrieve_same_hash_1st_key_value | :heavy_check_mark:
 retrieve_same_hash_1st_key_size | :x:
 retrieve_same_hash_2nd_key_value | :heavy_check_mark:
-retrieve_same_hash_2nd_key_size :x
+retrieve_same_hash_2nd_key_size | :x:
 
 Cache no. 3 (Ezra and Joe)
 
