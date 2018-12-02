@@ -20,7 +20,7 @@ struct cache_obj {
     index_type current_size;
     index_type no_of_buckets;
     cache_entry *array;
-    struct evictor *evictor;
+    struct FIFO_evictor *evictor;
     hash_func hasher;
 };
 
@@ -71,10 +71,8 @@ struct FIFO_node_struct {
 typedef struct FIFO_node_struct *FIFO_node;
 
 struct FIFO_evictor {
-    struct evictor FIFO_evictor;
     FIFO_node queue_head;
     FIFO_node queue_tail;
-    void (*push)(struct FIFO_evictor *evictor, key_type key);
 };
 
 void FIFO_enqueue(struct FIFO_evictor *evictor, key_type key) {
@@ -93,17 +91,16 @@ void FIFO_enqueue(struct FIFO_evictor *evictor, key_type key) {
     }
 }
 
-key_type FIFO_dequeue(struct evictor *evictor) {
-    struct FIFO_evictor *evictor_2 = (struct FIFO_evictor *) evictor;
-    if (evictor_2->queue_head == NULL) {
+key_type FIFO_dequeue(struct FIFO_evictor *evictor) {
+    if (evictor->queue_head == NULL) {
         // printf("Cache is currently empty, cannot evict any items");
         return NULL;
     }
     else {
-        key_type ret = evictor_2->queue_head->key;
-        evictor_2->queue_head = evictor_2->queue_head->next;
-        if(evictor_2->queue_head == NULL) {
-            evictor_2->queue_tail = NULL;
+        key_type ret = evictor->queue_head->key;
+        evictor->queue_head = evictor->queue_head->next;
+        if(evictor->queue_head == NULL) {
+            evictor->queue_tail = NULL;
         }
         return ret;
     }
@@ -113,10 +110,6 @@ struct FIFO_evictor *construct_FIFO_evictor() {
     struct FIFO_evictor *ret = (struct FIFO_evictor *) malloc(sizeof(struct FIFO_evictor));
     ret->queue_head = NULL;
     ret->queue_tail = NULL;
-    ret->push = FIFO_enqueue;
-    struct evictor *base = (struct evictor *) malloc(sizeof(struct evictor));
-    base->pop = FIFO_dequeue;
-    ret->FIFO_evictor = *base;
     return ret;
 }
 
@@ -124,7 +117,7 @@ struct FIFO_evictor *construct_FIFO_evictor() {
 // Implementation of functions in cache.h
 
 
-cache_type create_cache(index_type maxmem, evictor_type evictor, hash_func hasher) {
+cache_type create_cache(index_type maxmem, hash_func hasher) {
 
     if (hasher == NULL) {
         hasher = &default_hasher;
@@ -146,23 +139,17 @@ cache_type create_cache(index_type maxmem, evictor_type evictor, hash_func hashe
     cache_ptr->current_size = 0;
     cache_ptr->no_of_buckets = default_starting_array_size;
     cache_ptr->array = array;
-    if (evictor == NULL) {
-        struct FIFO_evictor *evictor_2 = construct_FIFO_evictor();
-        evictor = (struct FIFO_evictor *) evictor_2;
-    }
-    else {
-        evictor = (struct evictor *) evictor;
-    }
-    cache_ptr->evictor = (struct evictor *) evictor;
+    struct FIFO_evictor *evictor_2 = construct_FIFO_evictor();
+    cache_ptr->evictor = evictor_2;
     cache_ptr->hasher = hasher;
     return cache_ptr;
 }
 
-void cache_set(cache_type cache, key_type key, val_type val, index_type val_size) {
+int cache_set(cache_type cache, key_type key, val_type val, index_type val_size) {
     
     if (val_size > cache->max_size) {
-        printf("Value is too big for cache\n");
-        return;
+        printf("Value size exceeds cache maximum memory\n");
+        return 1;
     }
     index_type *size = (index_type *) malloc(sizeof(index_type));
     while (cache_space_used(cache) + val_size > cache->max_size) {
@@ -170,9 +157,12 @@ void cache_set(cache_type cache, key_type key, val_type val, index_type val_size
 
         //The below loop may only have to be called once if using a different implementation of FIFO or some other eviction policy
         while (cache_get(cache, key_to_evict, size) == NULL) {
-            key_to_evict = evict_key(cache->evictor);
+            key_to_evict = FIFO_dequeue(cache->evictor);
         }
-        cache_delete(cache, key_to_evict);
+        int i = cache_delete(cache, key_to_evict);
+        if (i != 0) {
+            return i;
+        }
     }
     free(size);
     
@@ -184,7 +174,7 @@ void cache_set(cache_type cache, key_type key, val_type val, index_type val_size
         if ((strcmp(p->elt_key, key) == 0)) {
             memcpy((void *) p->value, val, val_size);
             p->val_size = val_size;
-            return;
+            return 0;
         }
         q = p;
         p = p->next;
@@ -196,7 +186,7 @@ void cache_set(cache_type cache, key_type key, val_type val, index_type val_size
         new_entry->value = malloc(val_size);
         if ((new_entry->elt_key == NULL) || (new_entry->value == NULL)) {
             printf("Error trying to allocate memory for key %s\n", key);
-            return;
+            return 1;
         }
         strcpy((char *) new_entry->elt_key, key); // fixed SIGSEGV at this line!
         memcpy((void *) new_entry->value, val, val_size);
@@ -211,13 +201,15 @@ void cache_set(cache_type cache, key_type key, val_type val, index_type val_size
         cache->current_size += 1;
         
         // This line should be removed and replaced with the appropriate line if FIFO is not being used for eviction
-        struct FIFO_evictor *evictor_2 = (struct FIFO_evictor *) cache->evictor;
-        evictor_2->push(evictor_2, key);
+        FIFO_enqueue(cache->evictor, key);
     }
 
     if (load_factor(cache) > 0.5) {
         resize_cache(cache);
     }
+
+    return 0;
+    
     /*
     // Check if key already exists in cache
 
@@ -259,24 +251,11 @@ val_type cache_get(cache_type cache, key_type key, index_type *val_size) {
         }
         p = p->next;
     }
+    *val_size = 0;
     return NULL;
-
-    /*
-    for (index_type i = 0; i < cache->no_of_buckets; i++) {
-        if (((cache->array)[i] != NULL) && (strcmp((cache->array)[i]->elt_key, key) == 0)) {
-            val_type value_ptr = (cache->array)[i]->value;
-            // This is the best solution I could come up with for measuring size of *value_ptr, since value_ptr is a void pointer and thus cannot
-            // be dereferenced directly
-            int value_size = (cache->array)[i]->val_size;
-            *val_size = value_size;
-            return value_ptr;
-        }
-    }
-    return NULL;
-    */
 }
 
-void cache_delete(cache_type cache, key_type key) {
+int cache_delete(cache_type cache, key_type key) {
     index_type entry_index = (*(cache->hasher))(key);
     entry_index = entry_index % (cache->no_of_buckets);
     cache_entry p = (cache->array)[entry_index];
@@ -298,20 +277,9 @@ void cache_delete(cache_type cache, key_type key) {
         else {
             q = p;
             p = p->next;
-        }       
+        }      
     }
-
-    /*
-    for (index_type i = 0; i < cache->no_of_buckets; i++) {
-        if ((cache->array)[i] != NULL && (strcmp((cache->array)[i]->elt_key, key) == 0)) {
-            free((cache->array)[i]->value);
-            free((cache->array)[i]->elt_key);
-            free((cache->array)[i]);
-            (cache->array)[i] = NULL;
-            break;
-        }
-    }
-    */
+    return 0;
 }
 
 index_type cache_space_used(cache_type cache) {
@@ -363,7 +331,7 @@ void resize_cache(cache_type cache) {
     val_type value = NULL;
     index_type *size = (index_type *) malloc(sizeof(index_type));
     for (index_type i = 0; i < cache->current_size; i++) {
-        key = cache->evictor->pop(cache->evictor);
+        key = FIFO_dequeue(cache->evictor);
         value = cache_get(cache, key, size);
         struct cache_elt temp = {key, value, *size, NULL};
         placeholder_array[i] = temp;
