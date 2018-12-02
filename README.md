@@ -1,71 +1,12 @@
-# Homework 3: Testing different caches
+# Homework 2 #
 
-Tanmay Dubey
+## Implementing a look-aside cache ## 
 
-I used Catch2 as my testing framework. The .c file was used for testing C implementations, and the .cc file for C++ ones.
+### Tanmay Dubey ###
 
-Test results for my cache:
+Separate chaining allows for hash tables with a high load factor, and saves space when the load factor is low. Open addressing saves memory when the hash table entries are small, and saves the time of allocating memory for each new entry record. I used separate chaining, since my hash table entries contain data as well as references to external storage, and thus are somewhat large. In such a situation, maintaining an array with a low load factor, as required of open addressing, is wasteful, since there will be many large empty slots. 
 
-Test name | Test function/description | Test status
---------- | ------------------------- | -----------
-retrieve_single_value | SECTION( "Cache returns correct value and size for a key that was inserted" ) | :heavy_check_mark:
-retrieve_single_size | SECTION( "Cache returns correct value and size for a key that was inserted" ) | :heavy_check_mark:
-retrieve_modified_value | SECTION( "Cache returns correct value and size for a key that was inserted and modified" ) | :heavy_check_mark:
-retrieve_modified_size | SECTION( "Cache returns correct value and size for a key that was inserted and modified" ) | :heavy_check_mark:
-retrieve_not_present | SECTION( "Cache correctly returns NULL for a key that wasn't inserted" ) | :heavy_check_mark:
-retrieve_deleted | SECTION( "Cache correctly returns NULL for a key that was inserted and deleted" ) | :heavy_check_mark:
-retrieve_evicted | SECTION( "Cache correctly returns NULL for a key that was evicted" ) | :heavy_check_mark:
-retrieve_same_hash_1st_key_value | SECTION( "Cache returns correct values and sizes for two keys that hash to the same location" ) | :heavy_check_mark:
-retrieve_same_hash_1st_key_size | SECTION( "Cache returns correct values and sizes for two keys that hash to the same location" ) | :heavy_check_mark:
-retrieve_same_hash_2nd_key_value | SECTION( "Cache returns correct values and sizes for two keys that hash to the same location" ) | :heavy_check_mark:
-retrieve_same_hash_2nd_key_size | SECTION( "Cache returns correct values and sizes for two keys that hash to the same location" ) | :heavy_check_mark:
+My FIFO implementation doesn't work if an element is removed and then immediately inserted (the element's order in the queue is not updated in that case). The problem here is finding a queue data structure with constant insertion to back, deletion from front, and random lookup. The data structure that comes the closest to supporting this is a dynamic array, which has deletion from back.
 
-Test results for other caches I tested:
+I used information in the following link to guide my development of the FIFO evictor: https://stackoverflow.com/questions/1403890/how-do-you-implement-a-class-in-c.
 
-Cache no. 1 (Alyssa and Monica)
-
-Test name | Test status
---------- | -----------
-retrieve_single_value | :heavy_check_mark:
-retrieve_single_size | :heavy_check_mark:
-retrieve_modified_value | :heavy_check_mark:
-retrieve_modified_size | :heavy_check_mark:
-retrieve_not_present | :heavy_check_mark:
-retrieve_deleted | :heavy_check_mark:
-retrieve_evicted | :heavy_check_mark:
-retrieve_same_hash_1st_key_value | :heavy_check_mark:
-retrieve_same_hash_1st_key_size | :heavy_check_mark:
-retrieve_same_hash_2nd_key_value | :heavy_check_mark:
-retrieve_same_hash_2nd_key_size | :heavy_check_mark:
-
-Cache no. 2 (David and Mike)
-
-Test name | Test status
---------- | -----------
-retrieve_single_value | :heavy_check_mark:
-retrieve_single_size | :x:
-retrieve_modified_value | :x:
-retrieve_modified_size | :x:
-retrieve_not_present | :heavy_check_mark:
-retrieve_deleted | :heavy_check_mark:
-retrieve_evicted | :heavy_check_mark:
-retrieve_same_hash_1st_key_value | :heavy_check_mark:
-retrieve_same_hash_1st_key_size | :x:
-retrieve_same_hash_2nd_key_value | :heavy_check_mark:
-retrieve_same_hash_2nd_key_size | :x:
-
-Cache no. 3 (Ezra and Joe)
-
-Test name | Test status
---------- | -----------
-retrieve_single_value | :heavy_check_mark:
-retrieve_single_size | :x:
-retrieve_modified_value | :x:
-retrieve_modified_size | :x:
-retrieve_not_present | :heavy_check_mark:
-retrieve_deleted | :heavy_check_mark:
-retrieve_evicted | :x:
-retrieve_same_hash_1st_key_value | :heavy_check_mark:
-retrieve_same_hash_1st_key_size | :x:
-retrieve_same_hash_2nd_key_value | :heavy_check_mark:
-retrieve_same_hash_2nd_key_size | :x:
