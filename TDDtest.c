@@ -42,9 +42,9 @@ TEST_CASE( "Test cache insertion, deletion, eviction and resizing" ) {
 
         long value2 = 1123581321;
         cache_set(cache1, "fibonacci", &value2, sizeof(value2));
-        float value3 = 1.123581321
+        float value3 = 1.123581321;
         cache_set(cache1, "fibonacci", &value3, sizeof(value3));
-        const long *return2 = (const long *) cache_get(cache1, "fibonacci", size);
+        const float *return2 = (const float *) cache_get(cache1, "fibonacci", size);
 
         REQUIRE( return2 != NULL );
 
